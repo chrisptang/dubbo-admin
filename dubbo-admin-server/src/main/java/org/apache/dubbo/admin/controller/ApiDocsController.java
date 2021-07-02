@@ -16,6 +16,7 @@
  */
 package org.apache.dubbo.admin.controller;
 
+import org.apache.dubbo.admin.annotation.Authority;
 import org.apache.dubbo.admin.controller.editors.CustomLocalDateEditor;
 import org.apache.dubbo.admin.controller.editors.CustomLocalDateTimeEditor;
 import org.apache.dubbo.admin.model.dto.docs.ApiInfoRequest;
@@ -53,6 +54,7 @@ import java.util.concurrent.ExecutionException;
 /**
  * dubbo doc ui server api.
  */
+@Authority(needLogin = true)
 @Api(tags = {"dubbo-api-docs-api"})
 @RestController
 @RequestMapping("/api/{env}/docs")
@@ -77,6 +79,12 @@ public class ApiDocsController {
      */
     @Value("${dubbo.consumer.timeout:1000}")
     private int timeout;
+
+    @Value("${dubbo.api.docs.group:apiDocsGroup}")
+    private String apiDocsGroup;
+
+    @Value("${dubbo.api.docs.version:v1}")
+    private String apiDocsVersion;
 
     @InitBinder
     public void initBinder(WebDataBinder binder) {
@@ -131,7 +139,7 @@ public class ApiDocsController {
             paramValues = new Object[0];
         }
         CompletableFuture<Object> future = ApiDocsDubboGenericUtil.invoke(dubboCfg.getRegistryCenterUrl(), dubboCfg.getInterfaceClassName(),
-                dubboCfg.getMethodName(), dubboCfg.isAsync(), dubboCfg.getVersion(), paramTypes, paramValues);
+                dubboCfg.getMethodName(), dubboCfg.isAsync(), dubboCfg.getVersion(), paramTypes, paramValues, dubboCfg.getGroup());
         try {
             Object objResult = future.get();
             return JSON.toJSONString(objResult, CLASS_NAME_PRE_FILTER);
@@ -162,22 +170,15 @@ public class ApiDocsController {
     @ApiOperation(value = "Get basic information of all modules, excluding API parameter information", notes = "Get basic information of all modules, excluding API parameter information", httpMethod = "GET", produces = "application/json")
     @GetMapping("/apiModuleList")
     public String apiModuleList(ApiInfoRequest apiInfoRequest){
-        CallDubboServiceRequest req = new CallDubboServiceRequest();
-        req.setRegistryCenterUrl("dubbo://" + apiInfoRequest.getDubboIp() + ":" + apiInfoRequest.getDubboPort());
-        req.setInterfaceClassName("org.apache.dubbo.apidocs.core.providers.IDubboDocProvider");
-        req.setMethodName("apiModuleList");
-        req.setAsync(false);
+        CallDubboServiceRequest req = createCallApiDocsServiceRequest("apiModuleList", apiInfoRequest);
+
         return callDubboService(req, null);
     }
 
     @ApiOperation(value = "Get the parameter information of the specified API", notes = "Get the parameter information of the specified API", httpMethod = "GET", produces = "application/json")
     @GetMapping("/apiParamsResp")
     public String apiParamsResp(ApiInfoRequest apiInfoRequest){
-        CallDubboServiceRequest req = new CallDubboServiceRequest();
-        req.setRegistryCenterUrl("dubbo://" + apiInfoRequest.getDubboIp() + ":" + apiInfoRequest.getDubboPort());
-        req.setInterfaceClassName("org.apache.dubbo.apidocs.core.providers.IDubboDocProvider");
-        req.setMethodName("apiParamsResponseInfo");
-        req.setAsync(false);
+        CallDubboServiceRequest req = createCallApiDocsServiceRequest("apiParamsResponseInfo", apiInfoRequest);
 
         List<CallDubboServiceRequestInterfaceParam> methodparams = new ArrayList<>(1);
         CallDubboServiceRequestInterfaceParam param = new CallDubboServiceRequestInterfaceParam();
@@ -196,9 +197,24 @@ public class ApiDocsController {
                 "java.lang.Character".equals(typeStr) ||
                 "java.lang.Short".equals(typeStr) ||
                 "java.lang.Boolean".equals(typeStr) ||
-                "java.lang.String".equals(typeStr)) {
+                "java.lang.String".equals(typeStr) ||
+                "java.math.BigDecimal".equals(typeStr) ||
+                "java.math.BigInteger".equals(typeStr)) {
             return true;
         }
         return false;
+    }
+
+    private CallDubboServiceRequest createCallApiDocsServiceRequest(String methodName, ApiInfoRequest apiInfoRequest) {
+        CallDubboServiceRequest req = new CallDubboServiceRequest();
+        req.setRegistryCenterUrl("dubbo://" + apiInfoRequest.getDubboIp() + ":" + apiInfoRequest.getDubboPort());
+        req.setMethodName(methodName);
+
+        req.setInterfaceClassName("org.apache.dubbo.apidocs.core.providers.IDubboDocProvider");
+        req.setAsync(false);
+        req.setVersion(apiDocsVersion);
+        req.setGroup(apiDocsGroup);
+
+        return req;
     }
 }

@@ -46,6 +46,8 @@ public interface RouteService {
     void disableConditionRoute(String id);
 
 
+    ConditionRouteDTO findConditionRoute(ConditionRouteDTO crDTO);
+
     ConditionRouteDTO findConditionRoute(String id);
 
     void createTagRoute(TagRouteDTO tagRoute);

@@ -88,6 +88,19 @@
           >
             <div>
               <div class="font-weight-normal">
+                <strong>{{ $t('apiDocsRes.apiForm.apiGroupShowLabel') }}</strong>
+              </div>
+              <div>
+                {{ this.apiInfoData.apiGroup || $t('apiDocsRes.apiForm.none') }}
+              </div>
+            </div>
+          </v-timeline-item>
+          <v-timeline-item
+            color="cyan"
+            small
+          >
+            <div>
+              <div class="font-weight-normal">
                 <strong>{{ $t('apiDocsRes.apiForm.apiDescriptionShowLabel') }}</strong>
               </div>
               <div>
@@ -291,7 +304,7 @@ export default {
           params: {
             dubboIp: curVal.dubboIp,
             dubboPort: curVal.dubboPort,
-            apiName: curVal.moduleClassName + '.' + curVal.apiName
+            apiName: curVal.moduleClassName + '.' + curVal.apiName + curVal.paramsDesc
           }
         })
         .then((response) => {
@@ -317,7 +330,9 @@ export default {
                 formItem.set('example', paramItem.example)
                 formItem.set('defaultValue', paramItem.defaultValue)
                 formItem.set('allowableValues', paramItem.allowableValues)
+                formItem.set('subParamsJson', paramItem.subParamsJson)
                 formItem.set('required', paramItem.required)
+                formItem.set('methodParam', true)
                 formsArray.push(formItem)
               } else {
                 // No htmltype, that's an object
@@ -335,10 +350,7 @@ export default {
                   formItem.set('description', paramInfoItem.description)
                   formItem.set('example', paramInfoItem.example)
                   formItem.set('defaultValue', paramInfoItem.defaultValue)
-                  formItem.set(
-                    'allowableValues',
-                    paramInfoItem.allowableValues
-                  )
+                  formItem.set('allowableValues', paramInfoItem.allowableValues)
                   formItem.set('subParamsJson', paramInfoItem.subParamsJson)
                   formItem.set('required', paramInfoItem.required)
                   formsArray.push(formItem)
@@ -361,6 +373,9 @@ export default {
       this.formValues.forEach((value, key) => {
         var elementIdSplited = key.split('@@')
         var tempMapKey = elementIdSplited[0] + '@@' + elementIdSplited[1]
+        if (elementIdSplited[5]) {
+          tempMapKey = tempMapKey + '@@' + elementIdSplited[5]
+        }
         var tempMapValueArray = tempMap.get(tempMapKey)
         if (!tempMapValueArray) {
           tempMapValueArray = new Array()
@@ -376,20 +391,23 @@ export default {
         var postDataItem = {}
         postData[key.split('@@')[1]] = postDataItem
         postDataItem.paramType = key.split('@@')[0]
-        var postDataItemValue = {}
-        postDataItem.paramValue = postDataItemValue
-        value.forEach(element => {
-          var elementKeySplited = element.key.split('@@')
-          var elementName = elementKeySplited[3]
-          if (elementKeySplited[4] === 'TEXT_AREA') {
-            if (element.value !== '') {
+        if (key.split('@@')[2]) {
+          postDataItem.paramValue = value[0].value
+        } else {
+          var postDataItemValue = {}
+          postDataItem.paramValue = postDataItemValue
+          value.forEach(element => {
+            var elementKeySplited = element.key.split('@@')
+            var elementName = elementKeySplited[3]
+            if (elementKeySplited[4] === 'TEXT_AREA') {
+              if (element.value !== '') {
+                postDataItemValue[elementName] = element.value
+              }
+            } else {
               postDataItemValue[elementName] = element.value
             }
-          } else {
-            var elementValue = element.value
-            postDataItemValue[elementName] = elementValue
-          }
-        })
+          })
+        }
       })
       if (this.formItemRegistryCenterUrl === '') {
         this.formItemRegistryCenterUrl = 'dubbo://' + this.formInfo.dubboIp + ':' + this.formInfo.dubboPort
@@ -402,7 +420,8 @@ export default {
           interfaceClassName: this.formItemInterfaceClassName,
           methodName: this.formItemMethodName,
           registryCenterUrl: this.formItemRegistryCenterUrl,
-          version: this.apiInfoData.apiVersion || ''
+          version: this.apiInfoData.apiVersion || '',
+          group: this.apiInfoData.apiGroup || '',
         },
         headers: {
           'Content-Type': 'application/json; charset=UTF-8'

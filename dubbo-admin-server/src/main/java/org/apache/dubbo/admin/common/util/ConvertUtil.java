@@ -24,6 +24,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static org.apache.dubbo.admin.common.util.Constants.COLON;
+
 public class ConvertUtil {
     private ConvertUtil() {
     }
@@ -48,13 +50,60 @@ public class ConvertUtil {
     }
 
     public static String getIdFromDTO(BaseDTO baseDTO) {
-        String id;
         if (StringUtils.isNotEmpty(baseDTO.getApplication())) {
-            id = baseDTO.getApplication();
-        } else {
-            id = baseDTO.getService();
+            return baseDTO.getApplication();
         }
-        return id;
+        // id format: "${class}:${version}:${group}"
+        return new StringBuilder(baseDTO.getService()).append(COLON).append(null2EmptyString(baseDTO.getServiceVersion()))
+                .append(COLON).append(null2EmptyString(baseDTO.getServiceGroup())).toString();
+    }
+
+    /**
+     * Detach interface class, version and group from id.
+     * @param id
+     * @return java.lang.String[] 0: interface class; 1: version; 2: group
+     */
+    public static String[] detachId(String id) {
+        if (id.contains(COLON)) {
+            return id.split(COLON);
+        } else {
+            return new String[]{id};
+        }
+    }
+
+    public static void detachIdToService(String id, BaseDTO baseDTO) {
+        String[] detachResult = detachId(id);
+        baseDTO.setService(detachResult[0]);
+        if (detachResult.length > 1) {
+            baseDTO.setServiceVersion(detachResult[1]);
+        }
+        if (detachResult.length > 2) {
+            baseDTO.setServiceGroup(detachResult[2]);
+        }
+    }
+
+    public static String getServiceIdFromDTO(BaseDTO baseDTO, String serviceVersion, String serviceGroup,
+                                             boolean groupAsFolder) {
+        StringBuilder buf = new StringBuilder();
+        buf.append(baseDTO.getService());
+        if (StringUtils.isNotEmpty(serviceVersion)) {
+            buf.append(COLON).append(serviceVersion);
+        }
+        if (StringUtils.isNotEmpty(serviceGroup)) {
+            if (groupAsFolder) {
+                buf.insert(0, serviceGroup + "/");
+            } else {
+                buf.append(COLON).append(serviceGroup);
+            }
+        }
+        return buf.toString();
+    }
+
+    public static String null2EmptyString(String str) {
+        if (null == str) {
+            str = StringUtils.EMPTY_STRING;
+        }
+        return str;
     }
 
     public static String getScopeFromDTO(BaseDTO baseDTO) {

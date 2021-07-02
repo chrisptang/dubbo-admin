@@ -18,51 +18,18 @@
  */
 package org.apache.dubbo.admin;
 
-import io.github.bonigarcia.wdm.WebDriverManager;
-import org.apache.commons.lang3.StringUtils;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import org.apache.dubbo.admin.pages.LoginPage;
+import org.fluentlenium.core.annotation.Page;
 import org.junit.Test;
-import org.openqa.selenium.By;
-import org.openqa.selenium.WebDriver;
-import org.openqa.selenium.firefox.FirefoxDriver;
-import org.seleniumhq.selenium.fluent.FluentWebDriver;
-
-import java.util.concurrent.TimeUnit;
 
 public class LoginIT extends BaseIT {
-    private static WebDriver driver;
-    private static FluentWebDriver fwd;
-    private static String BASE_URL;
-
-    @BeforeClass
-    public static void beforeClass() {
-        WebDriverManager.firefoxdriver().setup();
-
-        driver = new FirefoxDriver();
-
-        driver.manage().timeouts().implicitlyWait(10, TimeUnit.SECONDS);
-        fwd = new FluentWebDriver(driver);
-
-        BASE_URL = StringUtils.defaultString(System.getenv("BASEURL"), "http://localhost:8082");
-    }
-
-    @AfterClass
-    public static void afterClass() {
-        driver.quit();
-    }
-
+    @Page
+    private LoginPage loginPage;
 
     @Test
-    public void shouldOpenLogin() {
-        driver.get(BASE_URL + "/#/login");
+    public void shouldLogin() {
+        goTo(loginPage).loginWithRoot();
 
-        fwd.input(By.name("username")).sendKeys("root");
-        fwd.input(By.cssSelector("input[type='password']")).sendKeys("root");
-
-        this.takeShot(driver, "login");
-
-
-        fwd.button(By.tagName("button")).click();
+        loginPage.takeScreenshot("login.png");
     }
 }

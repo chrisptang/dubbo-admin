@@ -17,11 +17,14 @@
 
 package org.apache.dubbo.admin.registry.config.impl;
 
+import com.alibaba.nacos.api.PropertyKeyConst;
+import java.util.Map;
 import org.apache.dubbo.admin.common.util.Constants;
 import org.apache.dubbo.admin.registry.config.GovernanceConfiguration;
 import org.apache.dubbo.common.URL;
 import org.apache.dubbo.common.logger.Logger;
 import org.apache.dubbo.common.logger.LoggerFactory;
+import org.apache.dubbo.common.utils.StringConstantFieldValuePredicate;
 
 import com.alibaba.nacos.api.NacosFactory;
 import com.alibaba.nacos.api.config.ConfigService;
@@ -37,14 +40,12 @@ public class NacosConfiguration implements GovernanceConfiguration {
     private static final Logger logger = LoggerFactory.getLogger(NacosConfiguration.class);
 
     private ConfigService configService;
-    private String nameSpace;
     private String group;
     private URL url;
 
     @Override
     public void init() {
         group = url.getParameter(Constants.GROUP_KEY, "DEFAULT_GROUP");
-        nameSpace = url.getParameter(Constants.NAMESPACE_KEY, "public");
         configService = buildConfigService(url);
     }
 
@@ -64,6 +65,10 @@ public class NacosConfiguration implements GovernanceConfiguration {
     private Properties buildNacosProperties(URL url) {
         Properties properties = new Properties();
         setServerAddr(url, properties);
+        setNamespace(url, properties);
+        Map<String, String> parameters = url.getParameters(
+                StringConstantFieldValuePredicate.of(PropertyKeyConst.class));
+        properties.putAll(parameters);
         return properties;
     }
 
@@ -74,7 +79,13 @@ public class NacosConfiguration implements GovernanceConfiguration {
                 url.getPort() // Port
                 ;
         properties.put(SERVER_ADDR, serverAddr);
-        properties.put(NAMESPACE, nameSpace);
+    }
+
+    private void setNamespace(URL url, Properties properties) {
+        String namespace = url.getParameter(NAMESPACE);
+        if (StringUtils.isNotBlank(namespace)) {
+            properties.put(NAMESPACE, namespace);
+        }
     }
 
 
@@ -181,7 +192,7 @@ public class NacosConfiguration implements GovernanceConfiguration {
             groupAndDataId[1] = split[2];
         } else {
             groupAndDataId[0] = group;
-            groupAndDataId[1] = split[1] + Constants.PUNCTUATION_POINT + split[2];
+            groupAndDataId[1] = split[2];
         }
         return groupAndDataId;
     }

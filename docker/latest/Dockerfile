@@ -22,5 +22,9 @@
 FROM openjdk:8-jre-alpine
 LABEL maintainer="dev@dubbo.apache.org"
 COPY ./app/dubbo-admin-server-0.3.0-SNAPSHOT.jar /app.jar
-ENTRYPOINT ["java","-XX:+UnlockExperimentalVMOptions","-XX:+UseCGroupMemoryLimitForHeap","-Djava.security.egd=file:/dev/./urandom","-jar","/app.jar"]
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+
+ENV JAVA_OPTS ""
+
+CMD /usr/local/bin/entrypoint.sh
 EXPOSE 8080

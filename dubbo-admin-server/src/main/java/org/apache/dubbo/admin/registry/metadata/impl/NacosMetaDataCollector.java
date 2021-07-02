@@ -17,21 +17,26 @@
 
 package org.apache.dubbo.admin.registry.metadata.impl;
 
+import com.alibaba.nacos.api.PropertyKeyConst;
+import java.util.Map;
 import org.apache.dubbo.admin.common.util.Constants;
 import org.apache.dubbo.admin.registry.metadata.MetaDataCollector;
 import org.apache.dubbo.common.URL;
 import org.apache.dubbo.common.logger.Logger;
 import org.apache.dubbo.common.logger.LoggerFactory;
+import org.apache.dubbo.common.utils.StringConstantFieldValuePredicate;
 import org.apache.dubbo.metadata.report.identifier.KeyTypeEnum;
 import org.apache.dubbo.metadata.report.identifier.MetadataIdentifier;
 
 import com.alibaba.nacos.api.NacosFactory;
 import com.alibaba.nacos.api.config.ConfigService;
 import com.alibaba.nacos.api.exception.NacosException;
+import org.apache.commons.lang3.StringUtils;
 
 import java.util.Properties;
 
 import static com.alibaba.nacos.api.PropertyKeyConst.SERVER_ADDR;
+import static com.alibaba.nacos.api.PropertyKeyConst.NAMESPACE;
 
 public class NacosMetaDataCollector implements MetaDataCollector {
     private static final Logger logger = LoggerFactory.getLogger(NacosMetaDataCollector.class);
@@ -51,7 +56,6 @@ public class NacosMetaDataCollector implements MetaDataCollector {
     @Override
     public void init() {
         group = url.getParameter(Constants.GROUP_KEY, "DEFAULT_GROUP");
-
         configService = buildConfigService(url);
     }
 
@@ -71,6 +75,10 @@ public class NacosMetaDataCollector implements MetaDataCollector {
     private Properties buildNacosProperties(URL url) {
         Properties properties = new Properties();
         setServerAddr(url, properties);
+        setNamespace(url, properties);
+        Map<String, String> parameters = url.getParameters(
+                StringConstantFieldValuePredicate.of(PropertyKeyConst.class));
+        properties.putAll(parameters);
         return properties;
     }
 
@@ -81,6 +89,13 @@ public class NacosMetaDataCollector implements MetaDataCollector {
                 url.getPort() // Port
                 ;
         properties.put(SERVER_ADDR, serverAddr);
+    }
+
+    private void setNamespace(URL url, Properties properties) {
+        String namespace = url.getParameter(NAMESPACE);
+        if (StringUtils.isNotBlank(namespace)) {
+            properties.put(NAMESPACE, namespace);
+        }
     }
 
     @Override

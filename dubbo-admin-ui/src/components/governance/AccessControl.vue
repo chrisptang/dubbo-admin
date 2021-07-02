@@ -26,19 +26,22 @@
           <v-card-text>
             <v-form>
               <v-layout row wrap>
-                <v-combobox
-                  id="serviceSearch"
-                  v-model="filter"
-                  :loading="searchLoading"
-                  :items="typeAhead"
-                  :search-input.sync="input"
-                  @keyup.enter="submit"
-                  flat
-                  append-icon=""
-                  hide-no-data
-                  :suffix="queryBy"
-                  :label="$t('searchAccessRule')"
-                ></v-combobox>
+`                <v-flex>
+                  <v-combobox
+                    id="serviceSearch"
+                    v-model="filter"
+                    :loading="searchLoading"
+                    :items="typeAhead"
+                    :search-input.sync="input"
+                    @keyup.enter="submit"
+                    flat
+                    append-icon=""
+                    hide-no-data
+                    :suffix="queryBy"
+                    :label="$t('searchAccessRule')"
+                    @input="split($event)"
+                  ></v-combobox>
+                </v-flex>
                 <v-menu class="hidden-xs-only">
                   <v-btn slot="activator" large icon>
                     <v-icon>unfold_more</v-icon>
@@ -53,6 +56,21 @@
                     </v-list-tile>
                   </v-list>
                 </v-menu>
+                <v-flex xs6 sm3 md2 v-show="selected === 0">
+                  <v-text-field
+                    label="Version"
+                    :hint="$t('dataIdVersionHint')"
+                    v-model="serviceVersion4Search"
+                  ></v-text-field>
+                </v-flex>
+                <v-flex xs6 sm3 md2 v-show="selected === 0">
+                  <v-text-field
+                    v-show="selected === 0"
+                    label="Group"
+                    :hint="$t('dataIdGroupHint')"
+                    v-model="serviceGroup4Search"
+                  ></v-text-field>
+                </v-flex>
                 <v-btn @click="submit" color="primary" large>{{$t('search')}}</v-btn>
 
               </v-layout>
@@ -77,7 +95,7 @@
                  class="mb-2">{{$t('create')}}</v-btn>
         </v-toolbar>
 
-        <v-card-text class="pa-0" v-show="selected == 0">
+        <v-card-text class="pa-0" v-show="selected === 0">
           <v-data-table :headers="serviceHeaders"
                         :items="accesses"
                         :loading="loading"
@@ -115,7 +133,7 @@
             </template>
           </v-data-table>
         </v-card-text>
-        <v-card-text class="pa-0" v-show="selected == 1">
+        <v-card-text class="pa-0" v-show="selected === 1">
           <v-data-table :headers="appHeaders"
                         :items="accesses"
                         :loading="loading"
@@ -165,12 +183,29 @@
         </v-card-title>
         <v-card-text>
           <v-form ref="modalForm">
-            <v-text-field
-              label="Service Unique ID"
-              :hint="$t('dataIdHint')"
-              :readonly="modal.readonly"
-              v-model="modal.service"
-            ></v-text-field>
+            <v-layout wrap>
+              <v-flex xs24 sm12 md8>
+                <v-text-field
+                  label="Service class"
+                  :hint="$t('dataIdClassHint')"
+                  v-model="modal.service"
+                ></v-text-field>
+              </v-flex>
+              <v-flex xs6 sm3 md2>
+                <v-text-field
+                  label="Version"
+                  :hint="$t('dataIdVersionHint')"
+                  v-model="modal.serviceVersion"
+                ></v-text-field>
+              </v-flex>
+              <v-flex xs6 sm3 md2>
+                <v-text-field
+                  label="Group"
+                  :hint="$t('dataIdGroupHint')"
+                  v-model="modal.serviceGroup"
+                ></v-text-field>
+              </v-flex>
+            </v-layout>
             <v-text-field
               :label="$t('appName')"
               :hint="$t('appNameHint')"
@@ -192,7 +227,7 @@
                   :label="$t('blackList')"
                   :hint="$t('blackListHint')"
                   v-model="modal.blackList"
-                  :readonly="modal.id != null">
+                  :readonly="modal.readonly">
                 </v-text-field>
               </v-flex>
             </v-layout>
@@ -262,6 +297,8 @@ export default {
     typeAhead: [],
     input: null,
     timerID: null,
+    serviceVersion4Search: '',
+    serviceGroup4Search: '',
     modal: {
       enable: false,
       readonly: false,
@@ -270,6 +307,8 @@ export default {
       click: () => {},
       id: null,
       service: null,
+      serviceVersion: '',
+      serviceGroup: '',
       application: null,
       content: '',
       blackList: '',
@@ -336,7 +375,7 @@ export default {
           if (this.selected === 0) {
             this.typeAhead = this.$store.getters.getServiceItems(v)
           } else if (this.selected === 1) {
-            this.typeAhead = this.$store.getters.getAppItems(v)
+            this.typeAhead = this.$store.getters.getConsumerItems(v)
           }
           this.searchLoading = false
           this.timerID = null
@@ -349,6 +388,28 @@ export default {
       this.filter = document.querySelector('#serviceSearch').value.trim()
       this.search(true)
     },
+    split: function (service) {
+      if (this.selected === 0) {
+        const groupSplit = service.split('/')
+        const versionSplit = service.split(':')
+        if (groupSplit.length > 1) {
+          this.serviceGroup4Search = groupSplit[0]
+        } else {
+          this.serviceGroup4Search = ''
+        }
+        if (versionSplit.length > 1) {
+          this.serviceVersion4Search = versionSplit[1]
+        } else {
+          this.serviceVersion4Search = ''
+        }
+        const serviceSplit = versionSplit[0].split('/')
+        if (serviceSplit.length === 1) {
+          this.filter = serviceSplit[0]
+        } else {
+          this.filter = serviceSplit[1]
+        }
+      }
+    },
     search (rewrite) {
       if (!this.filter) {
         this.$notify.error('Either service or application is needed')
@@ -360,7 +421,11 @@ export default {
         if (this.selected === 0) {
           this.$router.push({
             path: 'access',
-            query: {service: this.filter}
+            query: {
+              service: this.filter,
+              serviceVersion: this.serviceVersion4Search,
+              serviceGroup: this.serviceGroup4Search
+            }
           })
         } else if (this.selected === 1) {
           this.$router.push({
@@ -369,7 +434,7 @@ export default {
           })
         }
       }
-      let url = '/rules/access/?' + type + '=' + this.filter
+      let url = '/rules/access/?' + type + '=' + this.filter + '&serviceVersion=' + this.serviceVersion4Search + '&serviceGroup=' + this.serviceGroup4Search
       this.$axios.get(url)
         .then(response => {
           this.accesses = response.data
@@ -416,6 +481,8 @@ export default {
       }
       this.$axios.post('/rules/access', {
         service: this.modal.service,
+        serviceVersion: this.modal.serviceVersion,
+        serviceGroup: this.modal.serviceGroup,
         application: this.modal.application,
         whitelist: whiteList,
         blacklist: blackList
@@ -435,23 +502,16 @@ export default {
       }).catch(error => this.showSnackbar('error', error.response.data.message))
     },
     toEdit (item, readonly) {
-      let itemId = null
-      if (this.selected === 0) {
-        itemId = item.service
-      } else {
-        itemId = item.application
-      }
-      if (itemId.includes('/')) {
-        itemId = itemId.replace('/', '*')
-      }
       Object.assign(this.modal, {
         enable: true,
         readonly: readonly,
         title: 'Edit',
         saveBtn: 'Update',
         click: this.editItem,
-        id: itemId,
+        id: item.id,
         service: item.service,
+        serviceVersion: item.serviceVersion,
+        serviceGroup: item.serviceGroup,
         application: item.application,
         whiteList: item.whitelist,
         blackList: item.blacklist
@@ -460,14 +520,22 @@ export default {
     },
     editItem () {
       // let doc = yaml.load(this.modal.content)
-      let blackList = this.modal.blackList.split(',')
-      let whiteList = this.modal.whiteList.split(',')
+      let blackList = []
+      if (this.modal.blackList) {
+        blackList = this.modal.blackList.split(',')
+      }
+      let whiteList = []
+      if (this.modal.whiteList) {
+        whiteList = this.modal.whiteList.split(',')
+      }
       let vm = this
       this.$axios.put('/rules/access/' + this.modal.id, {
         whitelist: whiteList,
         blacklist: blackList,
         application: this.modal.application,
-        service: this.modal.service
+        service: this.modal.service,
+        serviceVersion: this.modal.serviceVersion,
+        serviceGroup: this.modal.serviceGroup
 
       }).then(response => {
         if (response.status === 200) {
@@ -485,20 +553,11 @@ export default {
       }).catch(error => this.showSnackbar('error', error.response.data.message))
     },
     toDelete (item) {
-      let itemId = null
-      if (this.selected === 0) {
-        itemId = item.service
-      } else {
-        itemId = item.application
-      }
-      if (itemId.includes('/')) {
-        itemId = itemId.replace('/', '*')
-      }
       Object.assign(this.confirm, {
         enable: true,
         title: 'warnDeleteAccessControl',
-        text: `Id: ${itemId}`,
-        id: itemId
+        text: `Id: ${item.id}`,
+        id: item.id
       })
     },
     deleteItem (id) {
@@ -534,15 +593,29 @@ export default {
     this.setAppHeaders()
     this.setServiceHeaders()
     this.$store.dispatch('loadServiceItems')
-    this.$store.dispatch('loadAppItems')
+    this.$store.dispatch('loadConsumerItems')
     let query = this.$route.query
+    let queryServiceVersion = null
+    let queryServiceGroup = null
     if ('service' in query) {
       this.filter = query['service']
+      if (query.serviceVersion) {
+        queryServiceVersion = query.serviceVersion
+      }
+      if (query.serviceGroup) {
+        queryServiceGroup = query.serviceGroup
+      }
       this.selected = 0
     }
     if ('application' in query) {
       this.filter = query['application']
       this.selected = 1
+    }
+    if (queryServiceVersion != null) {
+      this.serviceVersion4Search = query.serviceVersion
+    }
+    if (queryServiceGroup != null) {
+      this.serviceGroup4Search = query.serviceGroup
     }
     if (this.filter !== null) {
       this.search()

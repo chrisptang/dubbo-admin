@@ -26,19 +26,22 @@
           <v-card-text>
             <v-form>
               <v-layout row wrap>
-                <v-combobox
-                  id="serviceSearch"
-                  v-model="filter"
-                  :items="typeAhead"
-                  :search-input.sync="input"
-                  :loading="searchLoading"
-                  @keyup.enter="submit"
-                  flat
-                  append-icon=""
-                  hide-no-data
-                  :suffix="queryBy"
-                  :label="$t('searchWeightRule')"
-                ></v-combobox>
+                <v-flex>
+                  <v-combobox
+                    id="serviceSearch"
+                    v-model="filter"
+                    :items="typeAhead"
+                    :search-input.sync="input"
+                    :loading="searchLoading"
+                    @keyup.enter="submit"
+                    flat
+                    append-icon=""
+                    hide-no-data
+                    :suffix="queryBy"
+                    :label="$t('searchWeightRule')"
+                    @input="split($event)"
+                  ></v-combobox>
+                </v-flex>
                 <v-menu class="hidden-xs-only">
                   <v-btn slot="activator" large icon>
                     <v-icon>unfold_more</v-icon>
@@ -53,6 +56,22 @@
                     </v-list-tile>
                   </v-list>
                 </v-menu>
+                <v-flex xs6 sm3 md2 v-show="selected === 0">
+                  <v-text-field
+                    v-show="selected === 0"
+                    label="Version"
+                    :hint="$t('dataIdVersionHint')"
+                    v-model="serviceVersion4Search"
+                  ></v-text-field>
+                </v-flex>
+                <v-flex xs6 sm3 md2 v-show="selected === 0">
+                  <v-text-field
+                    v-show="selected === 0"
+                    label="Group"
+                    :hint="$t('dataIdGroupHint')"
+                    v-model="serviceGroup4Search"
+                  ></v-text-field>
+                </v-flex>
                 <v-btn @click="submit" color="primary" large>{{$t('search')}}</v-btn>
 
               </v-layout>
@@ -70,7 +89,7 @@
           <v-btn outline color="primary" @click.stop="openDialog" class="mb-2">{{$t('create')}}</v-btn>
         </v-toolbar>
 
-        <v-card-text class="pa-0" v-show="selected == 0">
+        <v-card-text class="pa-0" v-show="selected === 0">
           <v-data-table
             :headers="serviceHeaders"
             :items="weights"
@@ -91,7 +110,7 @@
             </template>
           </v-data-table>
         </v-card-text>
-        <v-card-text class="pa-0" v-show="selected == 1">
+        <v-card-text class="pa-0" v-show="selected === 1">
           <v-data-table
             :headers="appHeaders"
             :items="weights"
@@ -121,12 +140,29 @@
           <span class="headline">{{$t('createNewWeightRule')}}</span>
         </v-card-title>
         <v-card-text >
-          <v-text-field
-            label="Service Unique ID"
-            :hint="$t('serviceIdHint')"
-            v-model="service"
-            :readonly="readonly"
-          ></v-text-field>
+          <v-layout wrap>
+            <v-flex xs24 sm12 md8>
+              <v-text-field
+                label="Service class"
+                :hint="$t('dataIdClassHint')"
+                v-model="service"
+              ></v-text-field>
+            </v-flex>
+            <v-flex xs6 sm3 md2>
+              <v-text-field
+                label="Version"
+                :hint="$t('dataIdVersionHint')"
+                v-model="serviceVersion"
+              ></v-text-field>
+            </v-flex>
+            <v-flex xs6 sm3 md2>
+              <v-text-field
+                label="Group"
+                :hint="$t('dataIdGroupHint')"
+                v-model="serviceGroup"
+              ></v-text-field>
+            </v-flex>
+          </v-layout>
           <v-text-field
             :label="$t('appName')"
             :hint="$t('appNameHint')"
@@ -219,6 +255,10 @@
       typeAhead: [],
       input: null,
       timerID: null,
+      serviceVersion4Search: '',
+      serviceGroup4Search: '',
+      serviceVersion: '',
+      serviceGroup: '',
       operations: [
         {id: 0, icon: 'visibility', tooltip: 'view'},
         {id: 1, icon: 'edit', tooltip: 'edit'},
@@ -307,13 +347,35 @@
         this.filter = document.querySelector('#serviceSearch').value.trim()
         this.search(true)
       },
+      split: function (service) {
+        if (this.selected === 0) {
+          const groupSplit = service.split('/')
+          const versionSplit = service.split(':')
+          if (groupSplit.length > 1) {
+            this.serviceGroup4Search = groupSplit[0]
+          } else {
+            this.serviceGroup4Search = ''
+          }
+          if (versionSplit.length > 1) {
+            this.serviceVersion4Search = versionSplit[1]
+          } else {
+            this.serviceVersion4Search = ''
+          }
+          const serviceSplit = versionSplit[0].split('/')
+          if (serviceSplit.length === 1) {
+            this.filter = serviceSplit[0]
+          } else {
+            this.filter = serviceSplit[1]
+          }
+        }
+      },
       search: function (rewrite) {
         if (!this.filter) {
           this.$notify.error('Either service or application is needed')
           return
         }
         let type = this.items[this.selected].value
-        let url = '/rules/weight/?' + type + '=' + this.filter
+        let url = '/rules/weight/?' + type + '=' + this.filter + '&serviceVersion=' + this.serviceVersion4Search + '&serviceGroup=' + this.serviceGroup4Search
         this.$axios.get(url)
           .then(response => {
             this.weights = response.data
@@ -360,6 +422,8 @@
           return
         }
         weight.service = this.service
+        weight.serviceVersion = this.serviceVersion
+        weight.serviceGroup = this.serviceGroup
         weight.application = this.application
         weight.weight = this.rule.weight
         weight.addresses = this.rule.address.split(',')
@@ -406,15 +470,7 @@
         }
       },
       itemOperation: function (icon, item) {
-        let itemId = ''
-        if (this.selected === 0) {
-          itemId = item.service
-        } else {
-          itemId = item.application
-        }
-        if (itemId.includes('/')) {
-          itemId = itemId.replace('/', '*')
-        }
+        let itemId = item.id
         switch (icon) {
           case 'visibility':
             this.$axios.get('/rules/weight/' + itemId)
@@ -440,6 +496,8 @@
       },
       handleWeight: function (weight, readonly) {
         this.service = weight.service
+        this.serviceVersion = weight.serviceVersion
+        this.serviceGroup = weight.serviceGroup
         this.application = weight.application
         // delete weight.service
         // delete weight.application
@@ -490,11 +548,19 @@
       this.$store.dispatch('loadAppItems')
       this.ruleText = this.template
       let query = this.$route.query
+      let queryServiceVersion = null
+      let queryServiceGroup = null
       let filter = null
       let vm = this
       Object.keys(query).forEach(function (key) {
         if (key === 'service') {
           filter = query[key]
+          if (query.serviceVersion) {
+            queryServiceVersion = query.serviceVersion
+          }
+          if (query.serviceGroup) {
+            queryServiceGroup = query.serviceGroup
+          }
           vm.selected = 0
         }
         if (key === 'application') {
@@ -502,6 +568,12 @@
           vm.selected = 1
         }
       })
+      if (queryServiceVersion != null) {
+        this.serviceVersion4Search = query.serviceVersion
+      }
+      if (queryServiceGroup != null) {
+        this.serviceGroup4Search = query.serviceGroup
+      }
       if (filter !== null) {
         this.filter = filter
         this.search(false)
