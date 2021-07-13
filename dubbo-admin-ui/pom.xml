@@ -41,6 +41,7 @@
                 <groupId>com.github.eirslett</groupId>
                 <artifactId>frontend-maven-plugin</artifactId>
                 <version>${frontend-maven-plugin.version}</version>
+
                 <executions>
                     <execution>
                         <id>install node and npm</id>
@@ -61,7 +62,7 @@
                         <phase>generate-resources</phase>
                         <!-- Optional configuration which provides for running any npm command -->
                         <configuration>
-                            <arguments>install</arguments>
+                            <arguments>install --proxy http://127.0.0.1:8001</arguments>
                         </configuration>
                     </execution>
                     <!-- Build and minify static files -->

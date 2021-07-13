@@ -17,10 +17,10 @@
 
 package org.apache.dubbo.admin.controller;
 
+import com.alibaba.fastjson.JSONObject;
 import com.google.gson.Gson;
-import org.apache.dubbo.admin.common.util.Constants;
-
 import org.apache.dubbo.admin.annotation.Authority;
+import org.apache.dubbo.admin.common.util.Constants;
 import org.apache.dubbo.admin.common.util.ConvertUtil;
 import org.apache.dubbo.admin.common.util.ServiceTestUtil;
 import org.apache.dubbo.admin.model.domain.MethodMetadata;
@@ -30,15 +30,13 @@ import org.apache.dubbo.admin.service.impl.GenericServiceImpl;
 import org.apache.dubbo.metadata.definition.model.FullServiceDefinition;
 import org.apache.dubbo.metadata.definition.model.MethodDefinition;
 import org.apache.dubbo.metadata.report.identifier.MetadataIdentifier;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.List;
 import java.util.Map;
+
 @Authority(needLogin = true)
 @RestController
 @RequestMapping("/api/{env}/test")
@@ -56,7 +54,14 @@ public class ServiceTestController {
         try {
             return genericService.invoke(serviceTestDTO.getService(), serviceTestDTO.getMethod(), serviceTestDTO.getParameterTypes(), serviceTestDTO.getParams());
         } catch (Exception e) {
-            throw e;
+            JSONObject errorObj = new JSONObject();
+            StringWriter sw = new StringWriter();
+            PrintWriter pw = new PrintWriter(sw);
+            e.printStackTrace(pw);
+            errorObj.put("error_message", pw.toString());
+            errorObj.put("status", 500);
+            errorObj.put("data", new Object());
+            return errorObj;
         }
     }
 

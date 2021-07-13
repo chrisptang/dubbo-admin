@@ -29,6 +29,8 @@ import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
 
+import static org.apache.dubbo.common.constants.CommonConstants.GENERIC_RAW_RETURN;
+
 @Component
 public class GenericServiceImpl {
     private ApplicationConfig applicationConfig;
@@ -47,7 +49,7 @@ public class GenericServiceImpl {
         applicationConfig.setRegistry(registryConfig);
     }
 
-    private RegistryConfig buildRegistryConfig(Registry registry) {
+    private static RegistryConfig buildRegistryConfig(Registry registry) {
         URL fromUrl = registry.getUrl();
 
         RegistryConfig config = new RegistryConfig();
@@ -67,10 +69,11 @@ public class GenericServiceImpl {
         ReferenceConfig<GenericService> reference = new ReferenceConfig<>();
         String group = Tool.getGroup(service);
         String version = Tool.getVersion(service);
-        String intf = Tool.getInterface(service);
-        reference.setGeneric(true);
-        reference.setApplication(applicationConfig);
-        reference.setInterface(intf);
+        String anInterface = Tool.getInterface(service);
+        reference.setGeneric(GENERIC_RAW_RETURN);
+        reference.setApplication(new ApplicationConfig("dubbo-admin"));
+        reference.setRegistry(buildRegistryConfig(registry));
+        reference.setInterface(anInterface);
         reference.setVersion(version);
         reference.setGroup(group);
 

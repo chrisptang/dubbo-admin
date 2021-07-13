@@ -44,6 +44,7 @@ public class CustomExceptionHandler {
     public CommonResponse commonExceptionHandle(Exception e) {
         CommonResponse commonResponse = CommonResponse.createCommonResponse();
         logger.error("[SystemException]Exception:", e);
+        e.printStackTrace();
         return commonResponse.fail("System Error, please try again later! Message:" + e.getMessage());
     }
 
@@ -53,6 +54,7 @@ public class CustomExceptionHandler {
     public CommonResponse serviceExceptionHandle(Exception e) {
         CommonResponse commonResponse = CommonResponse.createCommonResponse();
         logger.error("[ServiceException]Exception:", e);
+        e.printStackTrace();
         return commonResponse.fail("ServiceException, message:" + e.getMessage());
     }
 
@@ -62,6 +64,7 @@ public class CustomExceptionHandler {
     public CommonResponse permissionDeniedExceptionHandle(Exception e) {
         CommonResponse commonResponse = CommonResponse.createCommonResponse();
         logger.error("[PermissionDeniedException]Exception:", e);
+        e.printStackTrace();
         return commonResponse.fail("Permission Denied!");
     }
 
@@ -72,6 +75,7 @@ public class CustomExceptionHandler {
     public CommonResponse paramValidationExceptionHandle(Exception e) {
         CommonResponse commonResponse = CommonResponse.createCommonResponse();
         logger.error("[ParamValidationException]Exception:", e);
+        e.printStackTrace();
         return commonResponse.fail("Parameter validation failure! Message:" + e.getMessage());
     }
 
@@ -81,6 +85,7 @@ public class CustomExceptionHandler {
     public CommonResponse resourceNotFoundExceptionHandle(Exception e) {
         CommonResponse commonResponse = CommonResponse.createCommonResponse();
         logger.error("[ResourceNotFoundException]Exception:", e);
+        e.printStackTrace();
         return commonResponse.fail("Resource not found! Message:" + e.getMessage());
     }
 }

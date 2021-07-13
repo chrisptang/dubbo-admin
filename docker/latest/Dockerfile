@@ -21,10 +21,10 @@
 
 FROM openjdk:8-jre-alpine
 LABEL maintainer="dev@dubbo.apache.org"
-COPY ./app/dubbo-admin-server-0.3.0-SNAPSHOT.jar /app.jar
+COPY dubbo-admin-server-0.3.0-SNAPSHOT.jar /app.jar
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 
 ENV JAVA_OPTS ""
 
-CMD /usr/local/bin/entrypoint.sh
+CMD java $JAVA_OPTS -Djava.security.egd=file:/dev/./urandom -jar /app.jar
 EXPOSE 8080
